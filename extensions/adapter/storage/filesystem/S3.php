@@ -53,12 +53,20 @@ class S3 extends \lithium\core\Object {
 				'body' => $params['data']
 			);
 
+			if (empty($params['options'])) {
+				$params['options'] = array();
+			}
+
 			$params['options'] += $defaults;
 			$filename = $params['filename'];
 
-			if($s3->if_bucket_exists($bucket)) {
-				// @TODO: implement logic when bucket exists
-			} else {
+			// we were seeing issues that if we passed a path that started with
+			// "/" that it wouldn't write correctly this should fix it
+			if (strpos($filename, '/') === 0) {
+				$filename = preg_replace('/^\//', '', $filename, 1);
+			}
+
+			if (! $s3->if_bucket_exists($bucket)) {
 				$s3->create_bucket($bucket, $region);
 			}
 
@@ -84,15 +92,29 @@ class S3 extends \lithium\core\Object {
 			$defaults = array(
 				'url_only' => false
 			);
+			if (empty($params['options'])) {
+				$params['options'] = array();
+			}
+
 			$params['options'] += $defaults;
 			$filename = $params['filename'];
 
-			if($params['options']['url_only'] === true) {
+			// we were seeing issues that if we passed a path that started with
+			// "/" that it wouldn't write correctly this should fix it
+			if (strpos($filename, '/') === 0) {
+				$filename = preg_replace('/^\//', '', $filename, 1);
+			}
+
+			if ($params['options']['url_only'] === true) {
 				$urlTimeout = (isset($params['options']['url_timeout'])) ? $params['options']['url_timeout'] : 0;
 				return $s3->get_object_url($bucket, $filename, $urlTimeout, $params['options']);
 			}
 
-			return $s3->get_object($bucket, $filename, $params['options']);
+			$result = $s3->get_object($bucket, $filename, $params['options']);
+			if ($result->status == 200) {
+				return $result->body;
+			}
+			return "";
 		};
 
 	}
@@ -110,6 +132,13 @@ class S3 extends \lithium\core\Object {
 
 		return function($self, $params) use ($s3, $bucket, $region) {
 			$filename = $params['filename'];
+
+			// we were seeing issues that if we passed a path that started with
+			// "/" that it wouldn't write correctly this should fix it
+			if (strpos($filename, '/') === 0) {
+				$filename = preg_replace('/^\//', '', $filename, 1);
+			}
+
 			return $s3->delete_object($bucket, $filename, $params['options']);
 		};
 	}
@@ -129,6 +158,12 @@ class S3 extends \lithium\core\Object {
 
 		if(!isset($options['destBucket'])) {
 			return false;
+		}
+
+		// we were seeing issues that if we passed a path that started with
+		// "/" that it wouldn't write correctly this should fix it
+		if (strpos($srcFilename, '/') === 0) {
+			$srcFilename = preg_replace('/^\//', '', $srcFilename, 1);
 		}
 
 		$source = array('bucket' => $srcBucket, 'filename' => $srcFilename);
