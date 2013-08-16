@@ -70,7 +70,7 @@ class S3 extends \lithium\core\Object {
 				$s3->create_bucket($bucket, $region);
 			}
 
-			if($s3->if_object_exists($bucket, $filename)) {
+			if ($s3->if_object_exists($bucket, $filename)) {
 				// @TODO: implement logic when file exists
 			}
 
